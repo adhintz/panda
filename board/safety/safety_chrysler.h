@@ -116,7 +116,7 @@ static int chrysler_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
       chrysler_rt_torque_last = 0;
       chrysler_ts_last = ts;
     }
-    
+
     if (violation) {
       return false;
     }
