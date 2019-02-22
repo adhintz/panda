@@ -88,6 +88,9 @@ static int chrysler_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
       // &chrysler_torque_meas, CHRYSLER_MAX_RATE_UP, CHRYSLER_MAX_RATE_DOWN, CHRYSLER_MAX_TORQUE_ERROR);
       violation |= (desired_torque < (chrysler_desired_torque_last - CHRYSLER_MAX_RATE_DOWN));
       violation |= (desired_torque > (chrysler_desired_torque_last + CHRYSLER_MAX_RATE_UP));
+      
+      // used next time
+      chrysler_desired_torque_last = desired_torque;
 
       // *** torque real time rate limit check ***
       // This triggers on the drive 2019-01-20--11-44-06
@@ -107,13 +110,14 @@ static int chrysler_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
       violation = 1;
     }
 
-    // used next time
-    chrysler_desired_torque_last = desired_torque;
-
-    if (violation) {
+    // reset to 0 if either controls is not allowed or there's a violation
+    if (violation || !controls_allowed) {
       chrysler_desired_torque_last = 0;
       chrysler_rt_torque_last = 0;
       chrysler_ts_last = ts;
+    }
+    
+    if (violation) {
       return false;
     }
   }
