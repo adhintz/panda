@@ -5,11 +5,11 @@ import unittest
 import numpy as np
 import libpandasafety_py
 
-MAX_RATE_UP = 4 * 10  # do not want to strictly enforce 4
-MAX_RATE_DOWN = 8 * 10
+MAX_RATE_UP = 3 * 10  # do not want to strictly enforce
+MAX_RATE_DOWN = 3 * 10
 MAX_STEER = 261
 
-MAX_RT_DELTA = 112 * 2
+MAX_RT_DELTA = 112
 RT_INTERVAL = 250000
 
 MAX_TORQUE_ERROR = 80
@@ -65,22 +65,14 @@ class TestChryslerSafety(unittest.TestCase):
     self.assertFalse(self.safety.get_controls_allowed())
 
   def test_steer_safety_check(self):
-    self.safety.set_controls_allowed(True)
-    for t in range(-MAX_STEER*2, MAX_STEER*2):
-      self._set_prev_torque(t)
-      if abs(t) > MAX_STEER:
-        self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(t)))
-      else:
-        self.assertTrue(self.safety.chrysler_tx_hook(self._torque_msg(t)))
-
-    self.safety.set_controls_allowed(False)
-    self._set_prev_torque(0)
-    self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(-1)))
-    self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(1)))
-    self._set_prev_torque(1)
-    self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(2)))
-    self._set_prev_torque(-1)
-    self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(-2)))
+    for enabled in [0, 1]:
+      for t in range(-MAX_STEER*2, MAX_STEER*2):
+        self.safety.set_controls_allowed(enabled)
+        self._set_prev_torque(t)
+        if abs(t) > MAX_STEER or (not enabled and abs(t) > 0):
+          self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(t)))
+        else:
+          self.assertTrue(self.safety.chrysler_tx_hook(self._torque_msg(t)))
 
   def test_manually_enable_controls_allowed(self):
     self.safety.set_controls_allowed(1)
@@ -126,8 +118,7 @@ class TestChryslerSafety(unittest.TestCase):
     self.safety.set_chrysler_rt_torque_last(MAX_STEER)
     self.safety.set_chrysler_torque_meas(torque_meas, torque_meas)
     self.safety.set_chrysler_desired_torque_last(MAX_STEER)
-    # TODO I do not believe this next line is testing what we actually want to test:
-    self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(MAX_STEER - MAX_RATE_DOWN + MAX_TORQUE_ERROR)))
+    self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(MAX_STEER - MAX_RATE_DOWN - 1)))
 
   def test_exceed_torque_sensor(self):
     self.safety.set_controls_allowed(True)
@@ -138,7 +129,8 @@ class TestChryslerSafety(unittest.TestCase):
         t *= sign
         self.assertTrue(self.safety.chrysler_tx_hook(self._torque_msg(t)))
 
-      self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(sign * (MAX_TORQUE_ERROR + 2))))
+      # torque_meas check is currently disabld, so diable the test:
+      # self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(sign * (MAX_TORQUE_ERROR + 2))))
 
   def test_realtime_limit_up(self):
     self.safety.set_controls_allowed(True)
@@ -150,7 +142,7 @@ class TestChryslerSafety(unittest.TestCase):
         t *= sign
         self.safety.set_chrysler_torque_meas(t, t)
         self.assertTrue(self.safety.chrysler_tx_hook(self._torque_msg(t)))
-      # violation also disabled:
+      # MAX_RT_DELTA check is currently disabled, so disable the test:
       # self.assertFalse(self.safety.chrysler_tx_hook(self._torque_msg(sign * (MAX_RT_DELTA + 1))))
 
       self._set_prev_torque(0)
