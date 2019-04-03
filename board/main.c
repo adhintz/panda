@@ -20,6 +20,8 @@
 #include "drivers/spi.h"
 #include "drivers/timer.h"
 
+#include "power_saving.h"
+
 
 // ***************************** fan *****************************
 
@@ -141,6 +143,7 @@ void usb_cb_ep2_out(uint8_t *usbdata, int len, int hardwired) {
   uart_ring *ur = get_ring_by_number(usbdata[0]);
   if (!ur) return;
   if ((usbdata[0] < 2) || safety_tx_lin_hook(usbdata[0]-2, usbdata+1, len-1)) {
+    if (ur == &esp_ring) power_save_reset_timer();
     for (int i = 1; i < len; i++) while (!putc(ur, usbdata[i]));
   }
 }
@@ -539,6 +542,9 @@ int main() {
   } else {
     // enable ESP uart
     uart_init(USART1, 115200);
+    #ifdef EON
+      set_esp_mode(ESP_DISABLED);
+    #endif
   }
   // enable LIN
   uart_init(UART5, 10400);
@@ -569,6 +575,9 @@ int main() {
 #ifdef PANDA
   spi_init();
 #endif
+#ifdef DEBUG
+  puts("DEBUG ENABLED\n");
+#endif
 
   // set PWM
   fan_init();
@@ -577,6 +586,8 @@ int main() {
   puts("**** INTERRUPTS ON ****\n");
 
   __enable_irq();
+
+  power_save_init();
 
   // if the error interrupt is enabled to quickly when the CAN bus is active
   // something bad happens and you can't connect to the device over USB
@@ -590,8 +601,6 @@ int main() {
     uint64_t marker = 0;
     #define CURRENT_THRESHOLD 0xF00
     #define CLICKS 8
-    // Enough clicks to ensure that enumeration happened. Should be longer than bootup time of the device connected to EON
-    #define CLICKS_BOOTUP 30
   #endif
 
   for (cnt=0;;cnt++) {
@@ -618,8 +627,9 @@ int main() {
           }
           break;
         case USB_POWER_CDP:
-          // been CLICKS_BOOTUP clicks since we switched to CDP
-          if ((cnt-marker) >= CLICKS_BOOTUP ) {
+#ifndef EON
+          // been CLICKS clicks since we switched to CDP
+          if ((cnt-marker) >= CLICKS) {
             // measure current draw, if positive and no enumeration, switch to DCP
             if (!is_enumerated && current < CURRENT_THRESHOLD) {
               puts("USBP: no enumeration with current draw, switching to DCP mode\n");
@@ -631,6 +641,7 @@ int main() {
           if (current >= CURRENT_THRESHOLD) {
             marker = cnt;
           }
+#endif
           break;
         case USB_POWER_DCP:
           // been at least CLICKS clicks since we switched to DCP

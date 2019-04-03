@@ -250,6 +250,7 @@ class Panda(object):
       pass
 
   def flash(self, fn=None, code=None, reconnect=True):
+    print("flash: main version is " + self.get_version())
     if not self.bootstub:
       self.reset(enter_bootstub=True)
     assert(self.bootstub)
@@ -270,7 +271,7 @@ class Panda(object):
         code = f.read()
 
     # get version
-    print("flash: version is "+self.get_version())
+    print("flash: bootstub version is " + self.get_version())
 
     # do flash
     Panda.flash_static(self._handle, code)
@@ -388,6 +389,10 @@ class Panda(object):
   def set_can_loopback(self, enable):
     # set can loopback mode for all buses
     self._handle.controlWrite(Panda.REQUEST_OUT, 0xe5, int(enable), 0, b'')
+
+  def set_can_enable(self, bus_num, enable):
+    # sets the can transciever enable pin
+    self._handle.controlWrite(Panda.REQUEST_OUT, 0xf4, int(bus_num), int(enable), b'')
 
   def set_can_speed_kbps(self, bus, speed):
     self._handle.controlWrite(Panda.REQUEST_OUT, 0xde, bus, int(speed*10), b'')
