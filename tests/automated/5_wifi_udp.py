@@ -1,7 +1,7 @@
 from __future__ import print_function
 import sys
 import time
-from helpers import time_many_sends, connect_wifi
+from .helpers import time_many_sends, connect_wifi
 from panda import Panda, PandaWifiStreaming
 from nose.tools import timed, assert_equal, assert_less, assert_greater
 

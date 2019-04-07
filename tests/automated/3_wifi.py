@@ -1,7 +1,7 @@
 from __future__ import print_function
 import os
 from panda import Panda
-from helpers import connect_wifi
+from .helpers import connect_wifi
 import requests
 
 def test_get_serial():

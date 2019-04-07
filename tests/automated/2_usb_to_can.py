@@ -4,7 +4,7 @@ import sys
 import time
 from panda import Panda
 from nose.tools import timed, assert_equal, assert_less, assert_greater
-from helpers import time_many_sends, connect_wo_esp
+from .helpers import time_many_sends, connect_wo_esp
 
 SPEED_NORMAL = 500
 SPEED_GMLAN = 33.3
